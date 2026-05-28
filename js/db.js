@@ -103,7 +103,10 @@ async function suscribirPush() {
         // 6. Enviar suscripción al servidor para que pueda enviar notificaciones
         const resSub = await fetch(`${API_URL}/api/v1/push/subscriptions`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + token
+            },
             body: JSON.stringify(subscription.toJSON())
         });
         if (!resSub.ok) throw new Error(`Error al registrar suscripción (HTTP ${resSub.status})`);

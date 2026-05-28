@@ -130,7 +130,12 @@ async function cargarMisCensos() {
 
   try {
     const result = await DB_CENSOS.allDocs({ include_docs: true });
-    const censos = result.rows.map(r => r.doc).filter(d => !d._id.startsWith('_design'));
+    const censos = result.rows
+    .map(r => r.doc)
+    .filter(d =>
+        !d._id.startsWith('_design') &&
+        d.syncStatus !== 'pending_delete'
+    );
 
     if (censos.length === 0) {
       subtitulo.textContent = 'Sin censos registrados';
@@ -174,9 +179,15 @@ async function crearTarjetaCenso(censo) {
   } catch(e) {}
   try {
     const pResult = await DB_PERSONAS.allDocs({ include_docs: true });
-    persona = pResult.rows.map(r => r.doc).find(
-      d => d._id === censo.idDueno || d.remoteId === censo.idDueno
-    );
+    persona = pResult.rows
+      .map(r => r.doc)
+      .find(d => d.remoteId === censo.idDueno);
+
+    if (!persona) {
+        persona = pResult.rows
+          .map(r => r.doc)
+          .find(d => d._id === censo.idDueno);
+    }
   } catch(e) {}
 
   const esSynced  = censo.syncStatus === 'synced';
@@ -253,9 +264,15 @@ async function abrirEdicion(id) {
     let mascota = null;
     try {
       const mResult = await DB_MASCOTAS.allDocs({ include_docs: true });
-      mascota = mResult.rows.map(r => r.doc).find(
-        d => d._id === censo.idMascota || d.remoteId === censo.idMascota
-      );
+      mascota = mResult.rows
+      .map(r => r.doc)
+      .find(d => d.remoteId === censo.idMascota);
+
+    if (!mascota) {
+        mascota = mResult.rows
+          .map(r => r.doc)
+          .find(d => d._id === censo.idMascota);
+    }
     } catch(e) {}
 
     document.getElementById('editId').value           = id;

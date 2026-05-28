@@ -278,6 +278,7 @@ if (foundP && foundP.doc.remoteId) {
 
                 // Censos NO envía id — lo genera el backend
                 const payload = {
+                    idMascota: idMascota,
                     idDueno:    idDueno,
                     fotografia: doc.fotografia,
                     lat:        doc.lat,
@@ -294,11 +295,75 @@ if (foundP && foundP.doc.remoteId) {
                     throw new Error(`HTTP ${res.status}: ${det}`);
                 }
                 const created = await res.json();
-                await DB_CENSOS.put({ ...doc, remoteId: created.id, syncStatus: 'synced' });
+                await DB_CENSOS.put({
+                    ...doc,
+                    idMascota: idMascota,
+                    idDueno: idDueno,
+                    remoteId: created.id,
+                    syncStatus: 'synced'
+                });
                 console.log('[Sync Censos] ✓', created.id);
             } catch (err) {
                 console.error('[Sync Censos]', doc._id, err.message);
             }
+        }
+
+        // Sync-down censos
+        try {
+            const res = await fetch(`${API_URL}/api/v1/censos`, {
+                headers: getHeaders(true)
+            });
+
+            if (!res.ok) return;
+
+            const remotos = await res.json();
+
+            const local = await DB_CENSOS.allDocs({ include_docs: true });
+
+            const map = {};
+
+            local.rows.forEach(r => {
+                if (r.doc.remoteId) {
+                    map[r.doc.remoteId] = true;
+                }
+            });
+
+            for (const r of remotos) {
+
+            // Solo traer censos del proyecto PWA_GRUPO_08
+            if (r.idProyecto !== 'PWA_GRUPO_08') {
+                continue;
+            }
+
+            if (!map[r.id]) {
+
+                    await DB_CENSOS.put({
+                        _id: 'remote-' + r.id,
+
+                        remoteId: r.id,
+
+                        idMascota: r.idMascota,
+                        idDueno: r.idDueno,
+
+                        mascota: r.mascota || null,
+                        dueno: r.dueno || null,
+
+                        fotografia: r.fotografia,
+                        lat: r.lat,
+                        lon: r.lon,
+
+                        idProyecto: r.idProyecto,
+                        color: r.color,
+
+                        syncStatus: 'synced'
+                    });
+
+                    console.log('[Sync Censos DOWN] ✓', r.id);
+                }
+            }
+
+        } catch(err) {
+            console.warn('[Sync Censos down]', err.message);
         }
     }
 }
